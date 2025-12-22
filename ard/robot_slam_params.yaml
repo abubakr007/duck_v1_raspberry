@@ -1,0 +1,37 @@
+slam_toolbox:
+  ros__parameters:
+    use_sim_time: false
+    solver_plugin: solver_plugins::CeresSolver
+    ceres_linear_solver: SPARSE_NORMAL_CHOLESKY
+    ceres_preconditioner: JACOBI
+    
+    # Match your actual frame structure
+    odom_frame: odom
+    map_frame: map
+    base_frame: base_footprint  # This matches your odometry child_frame_id
+    scan_topic: /scan
+    
+    # Your LiDAR settings
+    resolution: 0.05
+    max_laser_range: 12.0
+    
+    # Movement thresholds
+    minimum_travel_distance: 0.05
+    minimum_travel_heading: 0.05
+    
+    # Timing
+    transform_timeout: 0.5
+    tf_buffer_duration: 30.0
+    map_update_interval: 2.0
+    
+    # Enable map publishing
+    mode: mapping
+    # Increase message queue size (default is often 10)
+    message_queue_size: 50
+    # Process only every Nth scan (reduce load)
+    throttle_scans: 2
+    # Decrease processing frequency (default: 0.5)
+    transform_publish_period: 0.1
+    # Reduce Ceres solver iterations (if using Ceres)
+    ceres_max_iterations: 20
+    ceres_solver_type: SPARSE_NORMAL_CHOLESKY

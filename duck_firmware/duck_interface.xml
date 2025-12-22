@@ -1,0 +1,10 @@
+<library path="duck_firmware">
+    <class name="duck_firmware/DuckInterface"
+      type="duck_firmware::DuckInterface"
+      base_class_type="hardware_interface::SystemInterface"
+    >
+      <description>
+        Duck Hardware Interface
+      </description>
+    </class>
+  </library>

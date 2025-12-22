@@ -1,0 +1,42 @@
+{
+  "files" : [ {
+    "remoteURL" : "https://downloads.arduino.cc/libraries/library_index.json.gz",
+    "localPath" : "/home/abubakr/snap/arduino/71/.arduino15/cache/downloads.arduino.cc/libraries/library_index.json.gz",
+    "eTag" : "f20a6618481c4851a21f6e9d57b7475e",
+    "md5" : "MD5:f20a6618481c4851a21f6e9d57b7475e",
+    "createdAt" : "2025-09-06T00:01:13.642944",
+    "cacheControl" : {
+      "maxAge" : -1,
+      "mustRevalidate" : false,
+      "noCache" : false,
+      "noStore" : false
+    },
+    "expires" : "2025-09-06T00:01:12.642944"
+  }, {
+    "remoteURL" : "https://downloads.arduino.cc/libraries/library_index.json",
+    "localPath" : "/home/abubakr/snap/arduino/71/.arduino15/cache/downloads.arduino.cc/libraries/library_index.json",
+    "eTag" : "24df5506239191f149b55d5519846236-6",
+    "md5" : "MD5:9c9c5e00c778aaf41c31adedf1e83dd3",
+    "createdAt" : "2025-06-30T22:37:26.930013",
+    "cacheControl" : {
+      "maxAge" : -1,
+      "mustRevalidate" : false,
+      "noCache" : false,
+      "noStore" : false
+    },
+    "expires" : "2025-06-30T22:37:25.930013"
+  }, {
+    "remoteURL" : "https://downloads.arduino.cc/libraries/library_index.json.sig",
+    "localPath" : "/home/abubakr/snap/arduino/71/.arduino15/cache/downloads.arduino.cc/libraries/library_index.json.sig",
+    "eTag" : "8cdf297275bed91ed16d6e6cd8a84fa4",
+    "md5" : "MD5:8cdf297275bed91ed16d6e6cd8a84fa4",
+    "createdAt" : "2025-09-06T00:01:17.081404",
+    "cacheControl" : {
+      "maxAge" : -1,
+      "mustRevalidate" : false,
+      "noCache" : false,
+      "noStore" : false
+    },
+    "expires" : "2025-09-06T00:01:16.081404"
+  } ]
+}

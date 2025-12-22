@@ -1,0 +1,150 @@
+amcl:
+  ros__parameters:
+    use_sim_time: false
+    base_frame_id: base_footprint
+    odom_frame_id: odom
+    global_frame_id: map
+    scan_topic: scan
+    laser_model_type: likelihood_field
+    max_particles: 2000
+    min_particles: 500
+    z_hit: 0.8
+    z_short: 0.1
+    z_max: 0.05
+    z_rand: 0.05
+    update_min_d: 0.25
+    update_min_a: 0.20
+    laser_likelihood_max_dist: 1.0
+    transform_tolerance: 1.5
+
+map_server:
+  ros__parameters:
+    use_sim_time: false
+    yaml_filename: /home/abubakr/duck_ws/src/ard/maps/map.yaml
+
+planner_server:
+  ros__parameters:
+    expected_planner_frequency: 5.0
+    use_sim_time: false
+    planner_plugins: ["GridBased"]
+    GridBased:
+      plugin: "nav2_navfn_planner::NavfnPlanner"
+      tolerance: 0.5
+      use_astar: false
+      allow_unknown: true
+
+controller_server:
+  ros__parameters:
+    use_sim_time: false
+    controller_plugins: ["FollowPath"]
+    FollowPath:
+      plugin: "dwb_core::DWBLocalPlanner"
+      debug_trajectory_details: false
+      min_vel_x: 0.0
+      max_vel_x: 0.6
+      max_vel_theta: 1.8
+      acc_lim_x: 1.0
+      acc_lim_theta: 2.5
+      vx_samples: 20
+      vtheta_samples: 20
+      sim_time: 2.0
+      linear_granularity: 0.05
+      angular_granularity: 0.025
+      xy_goal_tolerance: 0.15
+      yaw_goal_tolerance: 0.1
+
+smoother_server:
+  ros__parameters:
+    use_sim_time: false
+    smoother_plugins: ["simple_smoother"]
+    simple_smoother:
+      plugin: "nav2_smoother::SimpleSmoother"
+
+bt_navigator:
+  ros__parameters:
+    use_sim_time: false
+    default_nav_to_pose_bt_xml: "navigate_to_pose_w_replanning_and_recovery.xml"
+    global_frame: map
+    robot_base_frame: base_footprint
+    transform_tolerance: 1.0
+
+behavior_server:
+  ros__parameters:
+    use_sim_time: false
+
+global_costmap:
+  ros__parameters:
+    use_sim_time: false
+    global_frame: map
+    robot_base_frame: base_footprint
+    update_frequency: 5.0
+    publish_frequency: 2.0
+    resolution: 0.05
+    rolling_window: false
+    robot_radius: 0.20
+    plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+    static_layer:
+      plugin: "nav2_costmap_2d::StaticLayer"
+      map_subscribe_transient_local: true
+    obstacle_layer:
+      plugin: "nav2_costmap_2d::ObstacleLayer"
+      observation_sources: scan
+      scan:
+        topic: scan
+        max_obstacle_height: 2.0
+        clearing: true
+        marking: true
+        expected_update_rate: 0.2
+        data_type: "LaserScan"
+        obstacle_max_range: 8.0
+        raytrace_max_range: 10.0
+    inflation_layer:
+      plugin: "nav2_costmap_2d::InflationLayer"
+      inflation_radius: 0.55
+
+local_costmap:
+  ros__parameters:
+    use_sim_time: false
+    global_frame: odom
+    robot_base_frame: base_footprint
+    update_frequency: 10.0
+    publish_frequency: 5.0
+    rolling_window: true
+    width: 3.0
+    height: 3.0
+    resolution: 0.05
+    robot_radius: 0.20
+    plugins: ["obstacle_layer", "inflation_layer"]
+    obstacle_layer:
+      plugin: "nav2_costmap_2d::ObstacleLayer"
+      observation_sources: scan
+      scan:
+        topic: scan
+        max_obstacle_height: 2.0
+        clearing: true
+        marking: true
+        expected_update_rate: 0.2
+        data_type: "LaserScan"
+        obstacle_max_range: 6.0
+        raytrace_max_range: 8.0
+    inflation_layer:
+      plugin: "nav2_costmap_2d::InflationLayer"
+      inflation_radius: 0.55
+
+lifecycle_manager_localization:
+  ros__parameters:
+    use_sim_time: false
+    autostart: true
+    node_names: ["map_server", "amcl"]
+
+lifecycle_manager_navigation:
+  ros__parameters:
+    use_sim_time: false
+    autostart: true
+    node_names: [
+      "controller_server",
+      "planner_server",
+      "smoother_server",
+      "bt_navigator",
+      "behavior_server"
+    ]
