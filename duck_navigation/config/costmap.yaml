@@ -33,5 +33,5 @@ nav2_costmap_2d:
       cost_scaling_factor: 5.0
       # Usually set to at least the robot_radius. 
       # 0.55 is still a good buffer for an 11cm robot.
-      inflation_radius: 0.55 
+      inflation_radius: 0.15 
     always_send_full_costmap: True
