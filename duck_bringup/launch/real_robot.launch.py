@@ -48,14 +48,14 @@ def generate_launch_description():
     imu_driver = Node(
         package="mpu9250driver",
         executable="mpu9250driver",
-        name="mpu9250driver_node",  # Must match YAML namespace
+        name="mpu9250driver",  # Must match YAML namespace
         output="screen",
         parameters=[
             # Load calibration parameters from YAML config file
             # After calibration, update ros2_mpu9250_driver/params/mpu9250.yaml
             # with the calibration values
             os.path.join(
-                get_package_share_directory("ros2_mpu9250_driver"),
+                get_package_share_directory("mpu9250driver"),
                 "params",
                 "mpu9250.yaml"
             )

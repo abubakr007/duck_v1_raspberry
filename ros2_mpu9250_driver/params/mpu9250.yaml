@@ -1,4 +1,4 @@
-mpu9250driver_node:
+mpu9250driver:
   ros__parameters:
     # Calibration disabled - using fixed offsets from Method 1 calibration
     calibrate: False
