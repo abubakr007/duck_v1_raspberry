@@ -43,7 +43,9 @@ duck_control:
     publish_wheel_data: true
 
     # Publish to TF directly or not
-    enable_odom_tf: true
+    # Set to false to prevent wheel encoder drift from affecting RViz2
+    # Odometry is still published on /duck_control/odom topic
+    enable_odom_tf: false
 
     # Velocity and acceleration limits
     # Whenever a min_* is unspecified, default to -max_*
