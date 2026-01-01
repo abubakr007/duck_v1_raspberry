@@ -8,7 +8,7 @@ nav2_costmap_2d:
     robot_radius: 0.11  # Updated from 0.1 to 0.11 (11cm)
     resolution: 0.05
     track_unknown_space: true
-    transform_tolerance: 2.0
+    transform_tolerance: 3.0
     plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
     static_layer:
       plugin: "nav2_costmap_2d::StaticLayer"

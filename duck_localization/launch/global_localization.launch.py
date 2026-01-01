@@ -87,7 +87,7 @@ def generate_launch_description():
                 "use_sim_time": use_sim_time,
                 "robot_base_frame": "base_footprint",  # Explicitly set
                 "global_frame": "map",
-                "transform_tolerance": 2.0 
+                "transform_tolerance": 3.0 
             },
         ],
     )
@@ -120,7 +120,7 @@ def generate_launch_description():
     )
 
     delayed_lifecycle_manager = TimerAction(
-        period=5.0,  # Wait 3 seconds after launch
+        period=10.0,  # Wait 3 seconds after launch
         actions=[nav2_lifecycle_manager_costmap]
     )
 

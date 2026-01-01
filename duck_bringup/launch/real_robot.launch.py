@@ -52,8 +52,12 @@ def generate_launch_description():
         output="screen",
         parameters=[
             {
-                "frame_id": "imu_link"  # preferred; use base_link only if you must
+                "frame_id": "imu_link"
             }
+        ],
+        # Remap the driver output to a clear name
+        remappings=[
+            ("imu", "imu/data_raw"),
         ],
     )
 
@@ -64,12 +68,16 @@ def generate_launch_description():
         output="screen",
         parameters=[
             {
-                "use_mag": True
+                "use_mag": False,
+                "publish_tf": False,
+                "world_frame": "enu",
             }
         ],
+        # No remapping needed - uses default topics
+        # Subscribes to: imu/data_raw (from driver)
+        # Publishes to: imu/data (default output)
         remappings=[
-            ("/imu/data_raw", "/imu"),
-            ("/imu/data", "/imu/filtered"),
+            ("imu/data", "imu/filtered"),
         ],
     )
 
