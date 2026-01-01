@@ -51,9 +51,14 @@ def generate_launch_description():
         name="mpu9250driver",
         output="screen",
         parameters=[
-            {
-                "frame_id": "imu_link"
-            }
+            # Load calibration parameters from YAML config file
+            # After calibration, update ros2_mpu9250_driver/params/mpu9250.yaml
+            # with the calibration values
+            os.path.join(
+                get_package_share_directory("ros2_mpu9250_driver"),
+                "params",
+                "mpu9250.yaml"
+            )
         ],
         # Remap the driver output to a clear name
         remappings=[
@@ -68,9 +73,41 @@ def generate_launch_description():
         output="screen",
         parameters=[
             {
+                # Magnetometer settings
                 "use_mag": False,
+                "use_magnetic_field_msg": False,
+                
+                # Transform settings
                 "publish_tf": False,
-                "world_frame": "enu",
+                "world_frame": "nwu",  # Changed from "enu" to "nwu" for better stability
+                
+                # Filter gain - lower value = more stable but slower response
+                # Increase if response is too slow, decrease if too noisy
+                "gain": 0.01,  # Default is 0.1, reduced for less drift
+                
+                # Stateless mode - helps reduce drift accumulation
+                "stateless": False,
+                
+                # Remove gravitational acceleration from linear acceleration
+                "remove_gravity_vector": True,
+                
+                # Orientation covariance (diagonal values)
+                # Higher values indicate less confidence in orientation
+                "orientation_stddev": 0.05,  # Increased from default to handle noise
+                
+                # Set fixed covariance for angular velocity and linear acceleration
+                # This helps when the robot is stationary
+                "fixed_covariance": True,
+                
+                # Angular velocity covariance
+                "angular_velocity_covariance": [0.02, 0.0, 0.0, 
+                                               0.0, 0.02, 0.0, 
+                                               0.0, 0.0, 0.02],
+                
+                # Linear acceleration covariance
+                "linear_acceleration_covariance": [0.04, 0.0, 0.0, 
+                                                  0.0, 0.04, 0.0, 
+                                                  0.0, 0.0, 0.04],
             }
         ],
         # No remapping needed - uses default topics
