@@ -48,7 +48,7 @@ def generate_launch_description():
     imu_driver = Node(
         package="mpu9250driver",
         executable="mpu9250driver",
-        name="mpu9250driver",
+        name="mpu9250driver_node",  # Must match YAML namespace
         output="screen",
         parameters=[
             # Load calibration parameters from YAML config file
