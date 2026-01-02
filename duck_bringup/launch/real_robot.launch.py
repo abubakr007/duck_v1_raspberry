@@ -172,10 +172,12 @@ def generate_launch_description():
     #     parameters=[{"use_sim_time": LaunchConfiguration("use_sim_time")}]
     # )
 
-    # imu_driver_node = Node(
-    #     package="duck_firmware",
-    #     executable="mpu6050_driver.py"
-    # )
+    imu_driver_node = Node(
+        package="duck_firmware",
+        executable="mpu6050_driver.py",
+        name="mpu6050_driver",
+        output="screen"
+    )
 
     # localization = IncludeLaunchDescription(
     #     os.path.join(
@@ -200,11 +202,11 @@ def generate_launch_description():
         hardware_interface,
         laser_driver,
         controller,
+        imu_driver_node,
         # imu_driver,        
         # imu_filter, 
         # twist_mux_launch,
         # twist_relay_node,
-        # imu_driver_node,
         # localization,
         # slam
     ])

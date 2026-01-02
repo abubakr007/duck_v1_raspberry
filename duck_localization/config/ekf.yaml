@@ -41,7 +41,7 @@ ekf_filter_node:
       
 
       # IMU Configuration
-      imu0: /imu/filtered
+      imu0: /imu/out
       # Each sensor reading updates some or all of the filter's state. These options give you greater control over which
       # values from each measurement are fed to the filter. For example, if you have an odometry message as input, but only
       # want to use its Z position value, then set the entire vector to false, except for the third entry. The order of the
@@ -50,11 +50,11 @@ ekf_filter_node:
       # has no pose information, so the first six values would be meaningless in that case. Each vector defaults to all false
       # if unspecified, effectively making this parameter required for each sensor.
       # In ekf.yaml
-      imu0_config: [false, false, false,
-                    false, false, true,
-                    false, false, false,
-                    false, false, false,  # <-- Change this 12th value to false
-                    false,  false, false]
+      imu0_config: [false, false, false,    # Position (x, y, z) - not provided by IMU
+              false, false, false,    # Orientation (roll, pitch, yaw) - not calculated
+              false, false, false,    # Linear velocity (vx, vy, vz) - not provided
+              false, false, true,     # Angular velocity (vroll, vpitch, vyaw) - USE vyaw from gyro!
+              true,  true,  false]    # Linear acceleration (ax, ay, az) - USE ax, ay from accelerometer
 
       imu0_differential: false
       imu0_pose_use_child_frame: true
