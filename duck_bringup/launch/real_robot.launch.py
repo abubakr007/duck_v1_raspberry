@@ -6,6 +6,7 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.actions import TimerAction
 
 
 
@@ -139,16 +140,23 @@ def generate_launch_description():
     )
     
     controller = IncludeLaunchDescription(
-        os.path.join(
-            get_package_share_directory("duck_control"),
-            "launch",
-            "controller.launch.py"
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("duck_control"),
+                "launch",
+                "controller.launch.py"
+            )
         ),
         launch_arguments={
             "use_simple_controller": "False",
             "use_python": "False"
         }.items(),
     )
+    controller_delayed = TimerAction(
+        period=3.0,
+        actions=[controller]
+    )
+
     
     # twist_mux_launch = IncludeLaunchDescription(
     #     os.path.join(
@@ -201,7 +209,7 @@ def generate_launch_description():
         use_slam_arg,
         hardware_interface,
         laser_driver,
-        controller,
+        controller_delayed,
         imu_driver_node,
         # imu_driver,        
         # imu_filter, 

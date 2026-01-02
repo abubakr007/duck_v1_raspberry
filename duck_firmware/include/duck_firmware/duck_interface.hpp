@@ -41,6 +41,12 @@ private:
   std::vector<double> velocity_states_;
   rclcpp::Time last_run_;
   rclcpp::Time last_write_;
+  rclcpp::Time last_read_time_;
+  bool last_read_time_valid_{false};
+  rclcpp::Time last_write_time_;
+  bool last_write_time_valid_{false};
+
+
 };
 }  // namespace duck_firmware
 

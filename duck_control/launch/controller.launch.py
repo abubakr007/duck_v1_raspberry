@@ -44,7 +44,7 @@ def generate_launch_description():
     
     use_sim_time_arg = DeclareLaunchArgument(
         "use_sim_time",
-        default_value="True",
+        default_value="False",
     )
     use_simple_controller_arg = DeclareLaunchArgument(
         "use_simple_controller",
@@ -129,7 +129,11 @@ def generate_launch_description():
         ]
     )
 
-    noisy_controller_launch = OpaqueFunction(function=noisy_controller)
+    noisy_controller_launch = GroupAction(
+        condition=IfCondition(use_simple_controller),
+        actions=[OpaqueFunction(function=noisy_controller)]
+    )
+
 
     return LaunchDescription(
         [
