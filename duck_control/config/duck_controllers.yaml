@@ -35,6 +35,7 @@ duck_control:
 
     # Base frame_id
     base_frame_id: base_footprint #default: base_link
+    odom_frame_id: odom
 
     # Publish limited velocity
     publish_limited_velocity: true
@@ -45,7 +46,7 @@ duck_control:
     # Publish to TF directly or not
     # Set to false to prevent wheel encoder drift from affecting RViz2
     # Odometry is still published on /duck_control/odom topic
-    enable_odom_tf: false
+    enable_odom_tf: true
 
     # Velocity and acceleration limits
     # Whenever a min_* is unspecified, default to -max_*
