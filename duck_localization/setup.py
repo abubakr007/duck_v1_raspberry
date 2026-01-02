@@ -25,5 +25,9 @@ setup(
     description='Nav2 AMCL + map_server launch for localization',
     license='Apache-2.0',
     extras_require={'test': ['pytest']},
-    entry_points={'console_scripts': []},
+    entry_points={
+        'console_scripts': [
+            'set_initial_pose = duck_localization.set_initial_pose:main',
+        ],
+    },
 )
