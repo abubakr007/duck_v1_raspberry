@@ -10,7 +10,6 @@ PWR_MGMT_1   = 0x6B
 SMPLRT_DIV   = 0x19
 CONFIG       = 0x1A
 GYRO_CONFIG  = 0x1B
-ACCEL_CONFIG = 0x1C
 INT_ENABLE   = 0x38
 ACCEL_XOUT_H = 0x3B
 ACCEL_YOUT_H = 0x3D
@@ -52,18 +51,13 @@ class MPU6050_Driver(Node):
             gyro_y = self.read_raw_data(GYRO_YOUT_H)
             gyro_z = self.read_raw_data(GYRO_ZOUT_H)
             
-            # Convert to proper units
-            # Accelerometer: ±2g range, LSB Sensitivity = 16384 LSB/g
-            # Convert to m/s²: (raw / 16384) * 9.81
-            self.imu_msg_.linear_acceleration.x = (acc_x / 16384.0) * 9.81
-            self.imu_msg_.linear_acceleration.y = (acc_y / 16384.0) * 9.81
-            self.imu_msg_.linear_acceleration.z = (acc_z / 16384.0) * 9.81
-            
-            # Gyroscope: ±250°/s range, LSB Sensitivity = 131 LSB/(°/s)
-            # Convert to rad/s: (raw / 131) * (π / 180)
-            self.imu_msg_.angular_velocity.x = (gyro_x / 131.0) * 0.017453293
-            self.imu_msg_.angular_velocity.y = (gyro_y / 131.0) * 0.017453293
-            self.imu_msg_.angular_velocity.z = (gyro_z / 131.0) * 0.017453293
+            # Full scale range +/- 250 degree/C as per sensitivity scale factor     
+            self.imu_msg_.linear_acceleration.x = acc_x / 1670.13
+            self.imu_msg_.linear_acceleration.y = acc_y / 1670.13
+            self.imu_msg_.linear_acceleration.z = acc_z / 1670.13
+            self.imu_msg_.angular_velocity.x = gyro_x / 7509.55
+            self.imu_msg_.angular_velocity.y = gyro_y / 7509.55
+            self.imu_msg_.angular_velocity.z = gyro_z / 7509.55
 
             self.imu_msg_.header.stamp = self.get_clock().now().to_msg()
             self.imu_pub_.publish(self.imu_msg_)
@@ -76,8 +70,7 @@ class MPU6050_Driver(Node):
             self.bus_.write_byte_data(DEVICE_ADDRESS, SMPLRT_DIV, 7)
             self.bus_.write_byte_data(DEVICE_ADDRESS, PWR_MGMT_1, 1)
             self.bus_.write_byte_data(DEVICE_ADDRESS, CONFIG, 0)
-            self.bus_.write_byte_data(DEVICE_ADDRESS, GYRO_CONFIG, 0)  # ±250°/s
-            self.bus_.write_byte_data(DEVICE_ADDRESS, ACCEL_CONFIG, 0)  # ±2g
+            self.bus_.write_byte_data(DEVICE_ADDRESS, GYRO_CONFIG, 24)
             self.bus_.write_byte_data(DEVICE_ADDRESS, INT_ENABLE, 1)
             self.is_connected_ = True
         except OSError:
