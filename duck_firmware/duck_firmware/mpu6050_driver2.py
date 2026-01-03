@@ -27,36 +27,14 @@ class MPU6050_Driver(Node):
     def __init__(self):
         super().__init__("mpu6050_driver")
         
-        # I2C Interface
+        # I2C Interafce
         self.is_connected_ = False
         self.init_i2c()
-
-        # Orientation tracking
-        self.yaw_ = 0.0
-        self.last_time_ = self.get_clock().now()
 
         # ROS 2 Interface
         self.imu_pub_ = self.create_publisher(Imu, "/imu/out", qos_profile=qos_profile_sensor_data)
         self.imu_msg_ = Imu()
-        self.imu_msg_.header.frame_id = "imu_link"
-        
-        # Set covariance matrices
-        self.imu_msg_.orientation_covariance = [
-            0.0025, 0.0,    0.0,
-            0.0,    0.0025, 0.0,
-            0.0,    0.0,    0.0025
-        ]
-        self.imu_msg_.angular_velocity_covariance = [
-            0.02, 0.0,  0.0,
-            0.0,  0.02, 0.0,
-            0.0,  0.0,  0.02
-        ]
-        self.imu_msg_.linear_acceleration_covariance = [
-            0.04, 0.0,  0.0,
-            0.0,  0.04, 0.0,
-            0.0,  0.0,  0.04
-        ]
-        
+        self.imu_msg_.header.frame_id = "imu_link"  # CHANGED FROM base_footprint
         self.frequency_ = 0.01
         self.timer_ = self.create_timer(self.frequency_, self.timerCallback)
         
@@ -84,11 +62,6 @@ class MPU6050_Driver(Node):
             if not self.is_connected_:
                 self.init_i2c()
             
-            # Calculate dt
-            current_time = self.get_clock().now()
-            dt = (current_time - self.last_time_).nanoseconds / 1e9
-            self.last_time_ = current_time
-            
             # Read Accelerometer raw value
             acc_x = self.read_raw_data(ACCEL_XOUT_H)
             acc_y = self.read_raw_data(ACCEL_YOUT_H)
@@ -108,41 +81,29 @@ class MPU6050_Driver(Node):
             self.imu_msg_.linear_acceleration.y = ay
             self.imu_msg_.linear_acceleration.z = az
             
-            # Gyroscope (rad/s)
-            gyro_x_rad = (gyro_x / 131.0) * 0.017453293
-            gyro_y_rad = (gyro_y / 131.0) * 0.017453293
-            gyro_z_rad = (gyro_z / 131.0) * 0.017453293
-            
-            self.imu_msg_.angular_velocity.x = gyro_x_rad
-            self.imu_msg_.angular_velocity.y = gyro_y_rad
-            self.imu_msg_.angular_velocity.z = gyro_z_rad
+            # Gyroscope
+            self.imu_msg_.angular_velocity.x = (gyro_x / 131.0) * 0.017453293
+            self.imu_msg_.angular_velocity.y = (gyro_y / 131.0) * 0.017453293
+            self.imu_msg_.angular_velocity.z = (gyro_z / 131.0) * 0.017453293
 
-            # Calculate roll and pitch from accelerometer
+            # Calculate orientation from accelerometer
             roll = math.atan2(ay, math.sqrt(ax*ax + az*az))
             pitch = math.atan2(-ax, math.sqrt(ay*ay + az*az))
-            
-            # Integrate gyroscope for yaw
-            self.yaw_ += gyro_z_rad * dt
-            
-            # Normalize yaw to [-pi, pi]
-            while self.yaw_ > math.pi:
-                self.yaw_ -= 2.0 * math.pi
-            while self.yaw_ < -math.pi:
-                self.yaw_ += 2.0 * math.pi
+            yaw = 0.0
             
             # Convert to quaternion
-            qx, qy, qz, qw = self.euler_to_quaternion(roll, pitch, self.yaw_)
+            qx, qy, qz, qw = self.euler_to_quaternion(roll, pitch, yaw)
             self.imu_msg_.orientation.x = qx
             self.imu_msg_.orientation.y = qy
             self.imu_msg_.orientation.z = qz
             self.imu_msg_.orientation.w = qw
 
-            # Debug output every 50 messages
+            # Debug output every 50 messages (~0.5 seconds)
             self.debug_counter_ += 1
             if self.debug_counter_ >= 50:
                 self.get_logger().info(
                     f"Roll: {math.degrees(roll):.2f}° | Pitch: {math.degrees(pitch):.2f}° | "
-                    f"Yaw: {math.degrees(self.yaw_):.2f}° | Gyro_Z: {gyro_z_rad:.3f} rad/s"
+                    f"Quat: [{qx:.3f}, {qy:.3f}, {qz:.3f}, {qw:.3f}]"
                 )
                 self.debug_counter_ = 0
 
