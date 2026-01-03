@@ -1,3 +1,5 @@
+import os
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, GroupAction, OpaqueFunction
 from launch_ros.actions import Node
@@ -41,6 +43,13 @@ def noisy_controller(context, *args, **kwargs):
 
 
 def generate_launch_description():
+    
+    # Get the path to the controller configuration file
+    controller_params_file = os.path.join(
+        get_package_share_directory('duck_control'),
+        'config',
+        'duck_controllers.yaml'
+    )
     
     use_sim_time_arg = DeclareLaunchArgument(
         "use_sim_time",
@@ -92,7 +101,8 @@ def generate_launch_description():
         executable="spawner",
         arguments=["duck_control", 
                    "--controller-manager", 
-                   "/controller_manager"
+                   "/controller_manager",
+                   "--param-file", controller_params_file,
         ],
         condition=UnlessCondition(use_simple_controller),
     )
