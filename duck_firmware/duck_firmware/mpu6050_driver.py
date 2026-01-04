@@ -31,8 +31,17 @@ class MPU6050_Driver(Node):
         self.is_connected_ = False
         self.init_i2c()
 
-        # Orientation tracking
+        # Calibration
+        self.gyro_x_offset_ = 0.0
+        self.gyro_y_offset_ = 0.0
+        self.gyro_z_offset_ = 0.0
+        self.calibrate_gyro(200) # Calibrate with 200 samples
+
+        # Complementary Filter variables
+        self.roll_ = 0.0
+        self.pitch_ = 0.0
         self.yaw_ = 0.0
+        self.alpha_ = 0.96 # Filter coefficient (0.96 means 96% Gyro, 4% Accel)
         self.last_time_ = self.get_clock().now()
 
         # ROS 2 Interface
@@ -57,11 +66,41 @@ class MPU6050_Driver(Node):
             0.0,  0.0,  0.04
         ]
         
-        self.frequency_ = 0.01
+        self.frequency_ = 0.02 # 50Hz for better integration
         self.timer_ = self.create_timer(self.frequency_, self.timerCallback)
         
         # Debug counter
         self.debug_counter_ = 0
+
+    def calibrate_gyro(self, samples):
+        """Calibrate gyroscope by calculating offsets"""
+        self.get_logger().info("Starting calibration... KEEP ROBOT STATIONARY!")
+        x_sum = 0.0
+        y_sum = 0.0
+        z_sum = 0.0
+        
+        for i in range(samples):
+            try:
+                gyro_x = self.read_raw_data(GYRO_XOUT_H)
+                gyro_y = self.read_raw_data(GYRO_YOUT_H)
+                gyro_z = self.read_raw_data(GYRO_ZOUT_H)
+                
+                x_sum += (gyro_x / 131.0) * 0.017453293
+                y_sum += (gyro_y / 131.0) * 0.017453293
+                z_sum += (gyro_z / 131.0) * 0.017453293
+            except OSError:
+                continue
+            
+            # Small delay not processed by ROS spin, handled by time.sleep if needed, 
+            # but here we rely on the bus speed. A tight loop is okay for calibration 
+            # if we don't block too long. 
+            pass
+        
+        self.gyro_x_offset_ = x_sum / samples
+        self.gyro_y_offset_ = y_sum / samples
+        self.gyro_z_offset_ = z_sum / samples
+        
+        self.get_logger().info(f"Calibration Complete. Offsets -> X: {self.gyro_x_offset_:.4f}, Y: {self.gyro_y_offset_:.4f}, Z: {self.gyro_z_offset_:.4f}")
 
     def euler_to_quaternion(self, roll, pitch, yaw):
         """Convert Euler angles to quaternion"""
@@ -108,18 +147,27 @@ class MPU6050_Driver(Node):
             self.imu_msg_.linear_acceleration.y = ay
             self.imu_msg_.linear_acceleration.z = az
             
-            # Gyroscope (rad/s)
-            gyro_x_rad = (gyro_x / 131.0) * 0.017453293
-            gyro_y_rad = (gyro_y / 131.0) * 0.017453293
-            gyro_z_rad = (gyro_z / 131.0) * 0.017453293
+            # Gyroscope (rad/s) - Apply Calibration
+            gyro_x_rad = ((gyro_x / 131.0) * 0.017453293) - self.gyro_x_offset_
+            gyro_y_rad = ((gyro_y / 131.0) * 0.017453293) - self.gyro_y_offset_
+            gyro_z_rad = ((gyro_z / 131.0) * 0.017453293) - self.gyro_z_offset_
+            
+            # Deadzone for very small noise
+            if abs(gyro_z_rad) < 0.005: gyro_z_rad = 0.0
+            if abs(gyro_x_rad) < 0.005: gyro_x_rad = 0.0
+            if abs(gyro_y_rad) < 0.005: gyro_y_rad = 0.0
             
             self.imu_msg_.angular_velocity.x = gyro_x_rad
             self.imu_msg_.angular_velocity.y = gyro_y_rad
             self.imu_msg_.angular_velocity.z = gyro_z_rad
 
             # Calculate roll and pitch from accelerometer
-            roll = math.atan2(ay, math.sqrt(ax*ax + az*az))
-            pitch = math.atan2(-ax, math.sqrt(ay*ay + az*az))
+            acc_roll = math.atan2(ay, math.sqrt(ax*ax + az*az))
+            acc_pitch = math.atan2(-ax, math.sqrt(ay*ay + az*az))
+            
+            # Complementary Filter
+            self.roll_ = self.alpha_ * (self.roll_ + gyro_x_rad * dt) + (1.0 - self.alpha_) * acc_roll
+            self.pitch_ = self.alpha_ * (self.pitch_ + gyro_y_rad * dt) + (1.0 - self.alpha_) * acc_pitch
             
             # Integrate gyroscope for yaw
             self.yaw_ += gyro_z_rad * dt
@@ -131,7 +179,7 @@ class MPU6050_Driver(Node):
                 self.yaw_ += 2.0 * math.pi
             
             # Convert to quaternion
-            qx, qy, qz, qw = self.euler_to_quaternion(roll, pitch, self.yaw_)
+            qx, qy, qz, qw = self.euler_to_quaternion(self.roll_, self.pitch_, self.yaw_)
             self.imu_msg_.orientation.x = qx
             self.imu_msg_.orientation.y = qy
             self.imu_msg_.orientation.z = qz
@@ -141,7 +189,7 @@ class MPU6050_Driver(Node):
             self.debug_counter_ += 1
             if self.debug_counter_ >= 50:
                 self.get_logger().info(
-                    f"Roll: {math.degrees(roll):.2f}° | Pitch: {math.degrees(pitch):.2f}° | "
+                    f"Roll: {math.degrees(self.roll_):.2f}° | Pitch: {math.degrees(self.pitch_):.2f}° | "
                     f"Yaw: {math.degrees(self.yaw_):.2f}° | Gyro_Z: {gyro_z_rad:.3f} rad/s"
                 )
                 self.debug_counter_ = 0
