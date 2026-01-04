@@ -20,16 +20,33 @@ def generate_launch_description():
     )
 
 
+    # ekf_node = Node(
+    #     package='robot_localization',
+    #     executable='ekf_node',
+    #     name='ekf_filter_node',
+    #     output='screen',
+    #     parameters=[os.path.join(
+    #         get_package_share_directory("duck_localization"),
+    #         "config",
+    #         "ekf.yaml"
+    #     )]
+    # )
+
     ekf_node = Node(
         package='robot_localization',
         executable='ekf_node',
         name='ekf_filter_node',
         output='screen',
-        parameters=[os.path.join(
-            get_package_share_directory("duck_localization"),
-            "config",
-            "ekf.yaml"
-        )]
+        parameters=[
+            os.path.join(
+                get_package_share_directory("duck_localization"),
+                "config",
+                "ekf.yaml"
+            )
+        ],
+        remappings=[
+            ('/odometry/filtered', '/odometry/local')
+        ]
     )
 
     use_sim_time_arg = DeclareLaunchArgument(
