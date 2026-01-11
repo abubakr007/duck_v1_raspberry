@@ -3,7 +3,7 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist, PoseStamped, TwistStamped
-from nav_msgs.msg import Path
+from nav_msgs.msg import Path, Odometry
 from tf2_ros import Buffer, TransformListener
 import math
 from tf_transformations import quaternion_matrix, quaternion_from_matrix, translation_from_matrix, inverse_matrix, concatenate_matrices
@@ -32,6 +32,7 @@ class PDMotionPlanner(Node):
 
         # Subscribers and publishers
         self.path_sub = self.create_subscription(Path, "/a_star/path", self.path_callback, 10)
+        self.odom_sub = self.create_subscription(Odometry, "/odometry/local", self.odom_callback, 10)
         self.cmd_pub = self.create_publisher(Twist, "/cmd_vel", 10)
         self.cmd_pub_out = self.create_publisher(TwistStamped,'/duck_control/cmd_vel',10)
         self.next_pose_pub = self.create_publisher(PoseStamped, "/pd/next_pose", 10)
@@ -39,6 +40,7 @@ class PDMotionPlanner(Node):
         # Control loop
         self.timer = self.create_timer(0.1, self.control_loop)
         self.global_plan = None
+        self.current_odom = None
 
         self.prev_angular_error = 0.0
         self.prev_linear_error = 0.0
@@ -47,28 +49,38 @@ class PDMotionPlanner(Node):
     def path_callback(self, path: Path):
         self.global_plan = path
 
+    def odom_callback(self, msg: Odometry):
+        self.current_odom = msg
+
     def control_loop(self):
         if not self.global_plan or not self.global_plan.poses:
             return
 
-        # Get the robot's current pose in the odom frame
-        try:
-            robot_pose_transform = self.tf_buffer.lookup_transform(
-                "odom", "base_footprint", rclpy.time.Time())
-        except Exception as ex:
-            self.get_logger().warn(f"Could not transform: {ex}")
-            return
-
-        # Transform plan to robot's frame
-        if not self.transform_plan(robot_pose_transform.header.frame_id):
-            self.get_logger().error("Unable to transform Plan in robot's frame")
-            return
-
+        # Get the robot's current pose
         robot_pose = PoseStamped()
-        robot_pose.header.frame_id = robot_pose_transform.header.frame_id
-        robot_pose.pose.position.x = robot_pose_transform.transform.translation.x
-        robot_pose.pose.position.y = robot_pose_transform.transform.translation.y
-        robot_pose.pose.orientation = robot_pose_transform.transform.rotation
+        
+        if self.current_odom:
+            # Use fused odometry if available
+            robot_pose.header = self.current_odom.header
+            robot_pose.pose = self.current_odom.pose.pose
+        else:
+             # Fallback to TF
+            try:
+                robot_pose_transform = self.tf_buffer.lookup_transform(
+                    "odom", "base_footprint", rclpy.time.Time())
+                
+                robot_pose.header.frame_id = robot_pose_transform.header.frame_id
+                robot_pose.pose.position.x = robot_pose_transform.transform.translation.x
+                robot_pose.pose.position.y = robot_pose_transform.transform.translation.y
+                robot_pose.pose.orientation = robot_pose_transform.transform.rotation
+            except Exception as ex:
+                self.get_logger().warn(f"Could not get robot pose (Odom/TF): {ex}")
+                return
+
+        # Transform plan to robot's frame (odom or whatever frame the pose is in)
+        if not self.transform_plan(robot_pose.header.frame_id):
+            self.get_logger().error(f"Unable to transform Plan to {robot_pose.header.frame_id}")
+            return
 
         next_pose: PoseStamped = self.get_next_pose(robot_pose)
         dx = next_pose.pose.position.x - robot_pose.pose.position.x
