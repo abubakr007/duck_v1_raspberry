@@ -61,6 +61,7 @@ install(
 install(PROGRAMS
   ${PROJECT_NAME}/pd_motion_planner.py
   ${PROJECT_NAME}/pure_pursuit.py
+  ${PROJECT_NAME}/odometry_test.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
