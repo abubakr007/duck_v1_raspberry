@@ -24,7 +24,7 @@ duck_control:
     twist_covariance_diagonal: [0.001, 0.001, 1.0e-3, 1.0e-3, 1.0e-3, 0.01]
 
     wheel_separation : 0.17
-    wheel_radius : 0.033
+    wheel_radius : 0.0335
 
     wheel_separation_multiplier: 1.0
     left_wheel_radius_multiplier: 1.0
@@ -53,11 +53,11 @@ duck_control:
     linear:
       x:
         has_velocity_limits    : true
-        max_velocity           : 0.7  # m/s
-        min_velocity           : -0.7 # m/s
+        max_velocity           : 0.2  # m/s (60 RPM motors, 0.0335m radius -> ~0.21 m/s max)
+        min_velocity           : -0.2 # m/s
         has_acceleration_limits: true
-        max_acceleration       : 0.7  # m/s^2
-        min_acceleration       : -0.7 # m/s^2
+        max_acceleration       : 0.5  # m/s^2
+        min_acceleration       : -0.5 # m/s^2
         has_jerk_limits        : false
         max_jerk               : 5.0  # m/s^3
     angular:

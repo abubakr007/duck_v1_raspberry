@@ -14,7 +14,7 @@ SimpleController::SimpleController(const std::string& name)
                                   , y_(0.0)
                                   , theta_(0.0)
 {
-    declare_parameter("wheel_radius", 0.033);
+    declare_parameter("wheel_radius", 0.0335);
     declare_parameter("wheel_separation", 0.17);
     wheel_radius_ = get_parameter("wheel_radius").as_double();
     wheel_separation_ = get_parameter("wheel_separation").as_double();
@@ -69,10 +69,14 @@ void SimpleController::jointCallback(const sensor_msgs::msg::JointState &state)
     rclcpp::Time msg_time = state.header.stamp;
     rclcpp::Duration dt = msg_time - prev_time_;
 
-    // Actualize the prev pose for the next itheration
+    // Actualize the prev pose for the next iteration
     left_wheel_prev_pos_ = state.position.at(0);
     right_wheel_prev_pos_ = state.position.at(1);
     prev_time_ = state.header.stamp;
+
+    if (dt.seconds() <= 0.0) {
+      return;
+    }
 
     // Calculate the rotational speed of each wheel
     double fi_left = dp_left / dt.seconds();

@@ -16,14 +16,14 @@ class NoisyController(Node):
 
     def __init__(self):
         super().__init__("noisy_controller")
-        self.declare_parameter("wheel_radius", 0.033)
+        self.declare_parameter("wheel_radius", 0.0335)
         self.declare_parameter("wheel_separation", 0.17)
 
         self.wheel_radius_ = self.get_parameter("wheel_radius").get_parameter_value().double_value
         self.wheel_separation_ = self.get_parameter("wheel_separation").get_parameter_value().double_value
 
-        self.get_logger().info("Using wheel radius %d" % self.wheel_radius_)
-        self.get_logger().info("Using wheel separation %d" % self.wheel_separation_)
+        self.get_logger().info(f"Using wheel radius {self.wheel_radius_}")
+        self.get_logger().info(f"Using wheel separation {self.wheel_separation_}")
 
         self.left_wheel_prev_pos_ = 0.0
         self.right_wheel_prev_pos_ = 0.0
@@ -31,12 +31,8 @@ class NoisyController(Node):
         self.y_ = 0.0
         self.theta_ = 0.0
 
-        self.joint_sub_ = self.create_subscription(JointState,"joint_states", self.jointCallback, 10)        
+        self.joint_sub_ = self.create_subscription(JointState,"joint_states", self.jointCallback, 10)
         self.odom_pub_ = self.create_publisher(Odometry, "duck_control/odom_noisy", 10)
-
-        self.speed_conversion_ = np.array([[self.wheel_radius_/2, self.wheel_radius_/2],
-                                           [self.wheel_radius_/self.wheel_separation_, -self.wheel_radius_/self.wheel_separation_]])
-        self.get_logger().info("The conversion matrix is %s" % self.speed_conversion_)
 
         # Fill the Odometry message with invariant parameters
         self.odom_msg_ = Odometry()
@@ -70,14 +66,18 @@ class NoisyController(Node):
         dp_right = wheel_encoder_right - self.right_wheel_prev_pos_
         dt = Time.from_msg(msg.header.stamp) - self.prev_time_
 
-        # Actualize the prev pose for the next itheration
+        # Actualize the prev pose for the next iteration
         self.left_wheel_prev_pos_ = msg.position[0]
         self.right_wheel_prev_pos_ = msg.position[1]
         self.prev_time_ = Time.from_msg(msg.header.stamp)
 
+        dt_sec = dt.nanoseconds / S_TO_NS
+        if dt_sec <= 0.0:
+            return
+
         # Calculate the rotational speed of each wheel
-        fi_left = dp_left / (dt.nanoseconds / S_TO_NS)
-        fi_right = dp_right / (dt.nanoseconds / S_TO_NS)
+        fi_left = dp_left / dt_sec
+        fi_right = dp_right / dt_sec
 
         # Calculate the linear and angular velocity
         linear = (self.wheel_radius_ * fi_right + self.wheel_radius_ * fi_left) / 2

@@ -6,6 +6,7 @@
 #include <nav_msgs/msg/odometry.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <tf2_ros/transform_broadcaster.h>
+#include <random>
 
 
 class NoisyController : public rclcpp::Node
@@ -34,6 +35,10 @@ private:
     // TF
     std::unique_ptr<tf2_ros::TransformBroadcaster> transform_broadcaster_;
     geometry_msgs::msg::TransformStamped transform_stamped_;
+
+    // Noise
+    std::default_random_engine noise_generator_;
+    std::normal_distribution<double> encoder_noise_;
 };
 
 #endif // NOISY_CONTROLLER_HPP
