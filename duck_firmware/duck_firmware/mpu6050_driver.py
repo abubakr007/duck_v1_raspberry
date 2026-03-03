@@ -78,27 +78,28 @@ class MPU6050_Driver(Node):
         x_sum = 0.0
         y_sum = 0.0
         z_sum = 0.0
-        
+        valid_samples = 0
+
         for i in range(samples):
             try:
                 gyro_x = self.read_raw_data(GYRO_XOUT_H)
                 gyro_y = self.read_raw_data(GYRO_YOUT_H)
                 gyro_z = self.read_raw_data(GYRO_ZOUT_H)
-                
+
                 x_sum += (gyro_x / 131.0) * 0.017453293
                 y_sum += (gyro_y / 131.0) * 0.017453293
                 z_sum += (gyro_z / 131.0) * 0.017453293
+                valid_samples += 1
             except OSError:
                 continue
-            
-            # Small delay not processed by ROS spin, handled by time.sleep if needed, 
-            # but here we rely on the bus speed. A tight loop is okay for calibration 
-            # if we don't block too long. 
-            pass
-        
-        self.gyro_x_offset_ = x_sum / samples
-        self.gyro_y_offset_ = y_sum / samples
-        self.gyro_z_offset_ = z_sum / samples
+
+        if valid_samples == 0:
+            self.get_logger().error("Calibration failed: no valid samples")
+            return
+
+        self.gyro_x_offset_ = x_sum / valid_samples
+        self.gyro_y_offset_ = y_sum / valid_samples
+        self.gyro_z_offset_ = z_sum / valid_samples
         
         self.get_logger().info(f"Calibration Complete. Offsets -> X: {self.gyro_x_offset_:.4f}, Y: {self.gyro_y_offset_:.4f}, Z: {self.gyro_z_offset_:.4f}")
 
@@ -216,10 +217,9 @@ class MPU6050_Driver(Node):
             self.is_connected_ = False
         
     def read_raw_data(self, addr):
-        high = self.bus_.read_byte_data(DEVICE_ADDRESS, addr)
-        low = self.bus_.read_byte_data(DEVICE_ADDRESS, addr+1)
-        value = ((high << 8) | low)
-        if(value > 32768):
+        data = self.bus_.read_i2c_block_data(DEVICE_ADDRESS, addr, 2)
+        value = (data[0] << 8) | data[1]
+        if value > 32768:
             value = value - 65536
         return value
 
