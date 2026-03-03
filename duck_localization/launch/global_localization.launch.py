@@ -75,10 +75,11 @@ def generate_launch_description():
         executable="map_server",
         name="map_server",
         output="screen",
-        parameters=[
-            {"yaml_filename": map_path},
-            {"use_sim_time": use_sim_time}
-        ],
+        parameters=[{
+            "yaml_filename": map_path,
+            "use_sim_time": use_sim_time,
+            "frame_id": "map"  # Explicitly set frame_id
+        }],
     )
 
     nav2_amcl = Node(
