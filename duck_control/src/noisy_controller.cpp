@@ -15,7 +15,7 @@ NoisyController::NoisyController(const std::string& name)
                                   , noise_generator_(std::chrono::system_clock::now().time_since_epoch().count())
                                   , encoder_noise_(0.0, 0.005)
 {
-    declare_parameter("wheel_radius", 0.0335);
+    declare_parameter("wheel_radius", 0.032);
     declare_parameter("wheel_separation", 0.17);
     wheel_radius_ = get_parameter("wheel_radius").as_double();
     wheel_separation_ = get_parameter("wheel_separation").as_double();

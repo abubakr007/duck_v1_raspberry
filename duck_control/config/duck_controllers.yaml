@@ -24,10 +24,10 @@ duck_control:
     twist_covariance_diagonal: [0.001, 0.001, 1.0e-3, 1.0e-3, 1.0e-3, 0.01]
 
     wheel_separation : 0.17
-    wheel_radius : 0.0335
+    wheel_radius : 0.032
 
     wheel_separation_multiplier: 1.0
-    left_wheel_radius_multiplier: 1.0
+    left_wheel_radius_multiplier: 1.007
     right_wheel_radius_multiplier: 1.0
 
     # Velocity commands timeout [s], default 0.5

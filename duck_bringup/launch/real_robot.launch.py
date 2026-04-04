@@ -180,6 +180,14 @@ def generate_launch_description():
     #     parameters=[{"use_sim_time": LaunchConfiguration("use_sim_time")}]
     # )
 
+
+
+
+
+
+    ##########################################
+    # IMU driver node - runs the custom MPU6050 driver that publishes raw IMU data
+    ##########################################
     imu_driver_node = Node(
         package="duck_firmware",
         executable="mpu6050_driver.py",

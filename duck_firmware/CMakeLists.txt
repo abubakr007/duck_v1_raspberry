@@ -69,6 +69,7 @@ install(
 
 install(PROGRAMS
   ${PROJECT_NAME}/mpu6050_driver.py
+  ${PROJECT_NAME}/imu_tf_broadcaster.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

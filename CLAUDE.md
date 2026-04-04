@@ -93,7 +93,8 @@ colcon test-result --verbose
 
 | Parameter | Value |
 |---|---|
-| Drive wheel radius | 0.0335m |
+| Drive wheel radius (physical) | 0.0335m |
+| Drive wheel radius (effective, under load) | 0.032m |
 | Wheel separation | 0.17m |
 | Serial port | `/dev/ttyACM0` @ 115200 baud |
 | IMU | MPU6050 via I2C (smbus, address 0x68) |

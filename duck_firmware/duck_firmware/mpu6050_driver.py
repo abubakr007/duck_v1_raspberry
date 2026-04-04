@@ -2,6 +2,7 @@
 import rclpy.time
 import smbus
 import math
+import time
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
@@ -86,9 +87,9 @@ class MPU6050_Driver(Node):
                 gyro_y = self.read_raw_data(GYRO_YOUT_H)
                 gyro_z = self.read_raw_data(GYRO_ZOUT_H)
 
-                x_sum += (gyro_x / 131.0) * 0.017453293
-                y_sum += (gyro_y / 131.0) * 0.017453293
-                z_sum += (gyro_z / 131.0) * 0.017453293
+                x_sum += (gyro_x / 131.0) * (math.pi / 180.0)
+                y_sum += (gyro_y / 131.0) * (math.pi / 180.0)
+                z_sum += (gyro_z / 131.0) * (math.pi / 180.0)
                 valid_samples += 1
             except OSError:
                 continue
@@ -149,9 +150,9 @@ class MPU6050_Driver(Node):
             self.imu_msg_.linear_acceleration.z = az
             
             # Gyroscope (rad/s) - Apply Calibration
-            gyro_x_rad = ((gyro_x / 131.0) * 0.017453293) - self.gyro_x_offset_
-            gyro_y_rad = ((gyro_y / 131.0) * 0.017453293) - self.gyro_y_offset_
-            gyro_z_rad = ((gyro_z / 131.0) * 0.017453293) - self.gyro_z_offset_
+            gyro_x_rad = ((gyro_x / 131.0) * (math.pi / 180.0)) - self.gyro_x_offset_
+            gyro_y_rad = ((gyro_y / 131.0) * (math.pi / 180.0)) - self.gyro_y_offset_
+            gyro_z_rad = ((gyro_z / 131.0) * (math.pi / 180.0)) - self.gyro_z_offset_
             
             # Deadzone for very small noise
             if abs(gyro_z_rad) < 0.005: gyro_z_rad = 0.0
@@ -203,15 +204,24 @@ class MPU6050_Driver(Node):
 
     def init_i2c(self):
         try:
+            # Close old bus if it exists to avoid leaking file descriptors
+            if hasattr(self, 'bus_'):
+                try:
+                    self.bus_.close()
+                except Exception:
+                    pass
+
             self.bus_ = smbus.SMBus(1)
-            self.bus_.write_byte_data(DEVICE_ADDRESS, SMPLRT_DIV, 7)
-            self.bus_.write_byte_data(DEVICE_ADDRESS, PWR_MGMT_1, 1)
-            self.bus_.write_byte_data(DEVICE_ADDRESS, CONFIG, 0)
-            self.bus_.write_byte_data(DEVICE_ADDRESS, GYRO_CONFIG, 0)
-            self.bus_.write_byte_data(DEVICE_ADDRESS, ACCEL_CONFIG, 0)
-            self.bus_.write_byte_data(DEVICE_ADDRESS, INT_ENABLE, 1)
+            self.bus_.write_byte_data(DEVICE_ADDRESS, PWR_MGMT_1, 0x80)  # Reset device
+            time.sleep(0.1)
+            self.bus_.write_byte_data(DEVICE_ADDRESS, PWR_MGMT_1, 1)     # Clock source: PLL with X-axis gyro
+            self.bus_.write_byte_data(DEVICE_ADDRESS, CONFIG, 3)          # DLPF ~44Hz bandwidth (reduces vibration noise)
+            self.bus_.write_byte_data(DEVICE_ADDRESS, SMPLRT_DIV, 19)    # 1kHz / (1+19) = 50Hz, matches our read rate
+            self.bus_.write_byte_data(DEVICE_ADDRESS, GYRO_CONFIG, 0)    # ±250°/s
+            self.bus_.write_byte_data(DEVICE_ADDRESS, ACCEL_CONFIG, 0)   # ±2g
+            self.bus_.write_byte_data(DEVICE_ADDRESS, INT_ENABLE, 1)     # Data ready interrupt
             self.is_connected_ = True
-            self.get_logger().info("MPU6050 initialized successfully")
+            self.get_logger().info("MPU6050 initialized successfully (DLPF=44Hz, sample=50Hz)")
         except OSError as e:
             self.get_logger().error(f"Failed to initialize MPU6050: {e}")
             self.is_connected_ = False
@@ -219,7 +229,7 @@ class MPU6050_Driver(Node):
     def read_raw_data(self, addr):
         data = self.bus_.read_i2c_block_data(DEVICE_ADDRESS, addr, 2)
         value = (data[0] << 8) | data[1]
-        if value > 32768:
+        if value >= 32768:
             value = value - 65536
         return value
 
