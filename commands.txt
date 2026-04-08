@@ -1,0 +1,30 @@
+ How to use:
+  # Terminal 1: Hardware (unchanged)
+  ros2 launch duck_bringup real_robot.launch.py
+
+  # Terminal 2: Navigation
+  ros2 launch duck_nav_stack navigation.launch.py
+
+  # Then set goals via RViz2 "2D Goal Pose" button
+
+
+---------------------------------------
+for mapping 
+ Using the SLAM launch file that's already in the package:
+
+  # Terminal 1: Hardware
+  ros2 launch duck_bringup real_robot.launch.py
+
+  # Terminal 2: SLAM + Nav2
+  ros2 launch duck_nav_stack slam.launch.py
+
+  # Terminal 3: RViz2 to see the map building
+  rviz2 -d $(ros2 pkg prefix duck_nav_stack)/share/duck_nav_stack/config/navigation.rviz
+
+  Drive the robot around your house (joystick teleop or keyboard). You'll see the map building in RViz2 in real-time.
+
+  When you're happy with the map, save it:
+  ros2 run nav2_map_server map_saver_cli -f ~/duck_ws/src/duck_localization/maps/my_house
+
+  This creates my_house.yaml + my_house.pgm. Then use it for navigation:
+  ros2 launch duck_nav_stack navigation.launch.py map:=/home/abubakr/duck_ws/src/duck_localization/maps/my_house.yaml
