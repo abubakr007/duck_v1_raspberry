@@ -30,6 +30,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'loop_waypoints = duck_nav_stack.loop_waypoints:main',
         ],
     },
 )

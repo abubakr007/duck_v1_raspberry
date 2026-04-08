@@ -153,7 +153,50 @@
   <joint name="laser_joint" type="fixed">
     <parent link="base_link"/>
     <child link="laser"/>
-    <origin xyz="${base_length/2 - 0.04} 0 ${base_height + 0.021}" rpy="0 0 3.1416"/>
+    <!-- Lidar raised 4 cm above its previous mount to make room for the camera below it.
+         z = base_height + half-cylinder + 0.04 = 0.05 + 0.021 + 0.04 = 0.111 m -->
+    <origin xyz="${base_length/2 - 0.04} 0 ${base_height + 0.061}" rpy="0 0 3.1416"/>
+  </joint>
+
+  <!-- Camera (Raspberry Pi Camera Module 3 Wide / IMX708) -->
+  <!-- Mounted on the front face of the chassis, in the 4 cm gap that opened up
+       under the lidar when it was raised. The camera body sits flush against
+       the chassis front and points forward (+x). -->
+  <xacro:property name="camera_depth"  value="0.012"/>  <!-- x: lens-axis thickness -->
+  <xacro:property name="camera_width"  value="0.025"/>  <!-- y: board width        -->
+  <xacro:property name="camera_height" value="0.024"/>  <!-- z: board height       -->
+
+  <link name="camera_link">
+    <visual>
+      <geometry>
+        <box size="${camera_depth} ${camera_width} ${camera_height}"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="${camera_depth} ${camera_width} ${camera_height}"/>
+      </geometry>
+    </collision>
+    <xacro:box_inertia m="0.01" x="${camera_depth}" y="${camera_width}" z="${camera_height}" o_xyz="0 0 0" o_rpy="0 0 0"/>
+  </link>
+
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <!-- x: rear face of camera body flush with chassis front (base_length/2 + camera_depth/2)
+         z: 4 cm below the lidar centre (= the previous lidar mount height = base_height + 0.021) -->
+    <origin xyz="${base_length/2 + camera_depth/2} 0 ${base_height + 0.021}" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Standard ROS optical frame (REP-103: z forward, x right, y down).
+       Use camera_optical_link as the frame_id for sensor_msgs/Image and CameraInfo. -->
+  <link name="camera_optical_link"/>
+
+  <joint name="camera_optical_joint" type="fixed">
+    <parent link="camera_link"/>
+    <child link="camera_optical_link"/>
+    <origin xyz="0 0 0" rpy="${-pi/2} 0 ${-pi/2}"/>
   </joint>
 
   <link name="imu_link"/>

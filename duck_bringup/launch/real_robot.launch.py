@@ -12,10 +12,18 @@ from launch.actions import TimerAction
 
 def generate_launch_description():
     use_slam = LaunchConfiguration("use_slam")
+    use_camera = LaunchConfiguration("use_camera")
     duck_control_pkg = get_package_share_directory('duck_control')
     use_slam_arg = DeclareLaunchArgument(
         "use_slam",
         default_value="false"
+    )
+    use_camera_arg = DeclareLaunchArgument(
+        "use_camera",
+        default_value="false",
+        description="If true, also start the duck_vision camera node "
+                    "(libcamera/IMX708 driver). Off by default so the bringup "
+                    "stays usable on hosts without a camera."
     )
 
     # hardware_interface = IncludeLaunchDescription(
@@ -195,6 +203,21 @@ def generate_launch_description():
         output="screen"
     )
 
+    ##########################################
+    # Optional camera (duck_vision)
+    # Off by default — enable with `use_camera:=true`.
+    ##########################################
+    camera = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("duck_vision"),
+                "launch",
+                "camera.launch.py",
+            )
+        ),
+        condition=IfCondition(use_camera),
+    )
+
     # localization = IncludeLaunchDescription(
     #     os.path.join(
     #         get_package_share_directory("duck_localization"),
@@ -215,12 +238,14 @@ def generate_launch_description():
     
     return LaunchDescription([
         use_slam_arg,
+        use_camera_arg,
         hardware_interface,
         laser_driver,
         controller_delayed,
         imu_driver_node,
-        # imu_driver,        
-        # imu_filter, 
+        camera,
+        # imu_driver,
+        # imu_filter,
         # twist_mux_launch,
         # twist_relay_node,
         # localization,

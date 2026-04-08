@@ -1,0 +1,48 @@
+# Placeholder CameraInfo for the IMX708 Wide (Pi Camera Module 3 Wide).
+#
+# THESE INTRINSICS ARE A ROUGH ESTIMATE — they assume the nominal 102° HFOV of the
+# wide module and a 1280x720 binned/cropped output. They are useful enough for RViz
+# to render the frustum and for debug, but NOT for any task that needs metric accuracy
+# (visual odometry, AprilTags, hand-eye calibration, photogrammetry...).
+#
+# To replace this with a real calibration:
+#
+#   ros2 run camera_calibration cameracalibrator \
+#     --size 8x6 --square 0.025 \
+#     image:=/camera/image_raw camera:=/camera
+#
+# Then save the resulting YAML over this file.
+#
+# Math used here:
+#   HFOV  = 102° (wide variant)
+#   width = 1280
+#   fx = (width/2) / tan(HFOV/2) = 640 / tan(51°) ≈ 518.4
+#   fy = fx (assumes square pixels)
+#   cx = width/2  = 640
+#   cy = height/2 = 360
+image_width: 1280
+image_height: 720
+camera_name: imx708
+camera_matrix:
+  rows: 3
+  cols: 3
+  data: [518.4,   0.0, 640.0,
+           0.0, 518.4, 360.0,
+           0.0,   0.0,   1.0]
+distortion_model: plumb_bob
+distortion_coefficients:
+  rows: 1
+  cols: 5
+  data: [0.0, 0.0, 0.0, 0.0, 0.0]
+rectification_matrix:
+  rows: 3
+  cols: 3
+  data: [1.0, 0.0, 0.0,
+         0.0, 1.0, 0.0,
+         0.0, 0.0, 1.0]
+projection_matrix:
+  rows: 3
+  cols: 4
+  data: [518.4,   0.0, 640.0, 0.0,
+           0.0, 518.4, 360.0, 0.0,
+           0.0,   0.0,   1.0, 0.0]

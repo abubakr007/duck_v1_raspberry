@@ -1,0 +1,29 @@
+camera:
+  ros__parameters:
+    # Stream geometry. The pisp pipeline will round to a supported mode and
+    # log an "Adjusted" warning if your request can't be honoured exactly.
+    width: 1280
+    height: 720
+
+    # Target frame rate. Implemented as FrameDurationLimits — both bounds set
+    # equal so libcamera locks to a fixed period.
+    framerate: 15.0
+
+    # Software rotation applied to every frame before publishing.
+    # Only 0 and 180 are implemented; anything else falls back to 0 with a warning.
+    rotation_deg: 0
+
+    # Publisher QoS reliability for image_raw and camera_info topics.
+    #   "reliable"    — works with default RViz / image_view / image_transport (recommended)
+    #   "best_effort" — maximum throughput; DDS may silently drop large frames under load.
+    #                   If you set this, configure RViz's Image display to BEST_EFFORT
+    #                   reliability or it will not subscribe.
+    qos_reliability: "reliable"
+
+    # ROS conventions
+    frame_id: "camera_optical_link"
+    camera_name: "imx708"
+
+    # Leave empty to fall through to whatever the launch file passes in
+    # (defaults to the placeholder camera_info.yaml shipped with this package).
+    camera_info_url: ""

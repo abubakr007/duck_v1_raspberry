@@ -28,3 +28,29 @@ for mapping
 
   This creates my_house.yaml + my_house.pgm. Then use it for navigation:
   ros2 launch duck_nav_stack navigation.launch.py map:=/home/abubakr/duck_ws/src/duck_localization/maps/my_house.yaml
+
+
+ ros2 run duck_nav_stack loop_waypoints --ros-args \
+      -p point_a_x:=7.857288197452758 \
+      -p point_a_y:=-4.325688289551619 \
+      -p point_a_yaw:=-0.5774 \
+      -p point_b_x:=-0.5819200373228443 \
+      -p point_b_y:=1.2326015467839615 \
+      -p point_b_yaw:=1.6755
+
+
+
+
+ Three usage modes, all working:
+
+  # 1. Camera alone (testing, calibration, bag recording)
+  ros2 launch duck_vision camera.launch.py
+
+  # 2. Camera alone with overrides
+  ros2 launch duck_vision camera.launch.py width:=640 height:=480 framerate:=30.0
+
+  # 3. Full robot WITH camera
+  ros2 launch duck_bringup real_robot.launch.py use_camera:=true
+
+  # 4. Full robot WITHOUT camera (default — current behaviour preserved)
+  ros2 launch duck_bringup real_robot.launch.py

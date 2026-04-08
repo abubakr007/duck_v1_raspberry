@@ -22,6 +22,7 @@
    <!-- We reference these packages for files/params -->
   <exec_depend>duck_description</exec_depend>
   <exec_depend>duck_control</exec_depend>
+  <exec_depend>duck_vision</exec_depend>
 
   <export>
     <build_type>ament_python</build_type>
