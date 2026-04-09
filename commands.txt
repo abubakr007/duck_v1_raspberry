@@ -1,3 +1,5 @@
+claude --dangerously-skip-permissions
+
  How to use:
   # Terminal 1: Hardware (unchanged)
   ros2 launch duck_bringup real_robot.launch.py

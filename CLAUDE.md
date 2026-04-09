@@ -24,18 +24,22 @@ source ~/duck_ws/install/setup.bash
 
 ## Launch
 
-The main entry point launches the full stack with sequenced timing (hardware → localization → navigation → rosbridge):
+The main entry point launches hardware, navigation, camera, and rosbridge together:
 ```bash
-ros2 launch duck_bringup duck_sequenced_bringup.launch.py
+ros2 launch duck_bringup duck_app.launch.py                    # Full stack (default: camera on)
+ros2 launch duck_bringup duck_app.launch.py use_camera:=false  # Without camera
 ```
+
+This is also what `duck_robot.service` (systemd) runs on boot via `start_duck.sh`.
 
 Individual subsystems:
 ```bash
-ros2 launch duck_bringup real_robot.launch.py          # Hardware + lidar + controllers + IMU
-ros2 launch duck_localization global_localization.launch.py  # AMCL + EKF
-ros2 launch duck_bringup duck_full_stack.launch.py      # A* planner + smoother + PD motion planner
-ros2 launch duck_control joystick_teleop.launch.py      # Joystick manual control
-ros2 launch duck_description display.launch.py          # URDF visualization in RViz2
+ros2 launch duck_bringup real_robot.launch.py use_camera:=true  # Hardware + lidar + controllers + IMU + camera
+ros2 launch duck_nav_stack navigation.launch.py map:=/home/abubakr/duck_ws/src/duck_localization/maps/my_house.yaml  # Nav2 + AMCL + map server
+ros2 launch duck_localization global_localization.launch.py     # AMCL + EKF
+ros2 launch duck_bringup duck_full_stack.launch.py              # A* planner + smoother + PD motion planner
+ros2 launch duck_control joystick_teleop.launch.py              # Joystick manual control
+ros2 launch duck_description display.launch.py                  # URDF visualization in RViz2
 ```
 
 ## Testing
@@ -56,8 +60,10 @@ colcon test-result --verbose
 | `duck_firmware` | ament_cmake (C++/Python) | ros2_control hardware plugin (Arduino serial) + MPU6050 IMU driver |
 | `duck_localization` | ament_python | AMCL particle filter + EKF sensor fusion |
 | `duck_motion` | ament_cmake (C++/Python) | nav2_core Controller plugins: PD controller, Pure Pursuit |
+| `duck_nav_stack` | ament_python | Nav2 bringup: navigation + SLAM launch files and configs |
 | `duck_navigation` | ament_cmake | Nav2 costmap and smoother server configs |
 | `duck_planning` | ament_cmake (C++/Python) | A* and Dijkstra path planners |
+| `duck_vision` | ament_cmake (C++) | Camera node (libcamera/IMX708), publishes raw images |
 | `sllidar_ros2` | ament_cmake | External: RPLiDAR C1 driver |
 | `ros2_mpu9250_driver` | ament_cmake | External: MPU9250 driver (unused, replaced by MPU6050) |
 
@@ -107,4 +113,6 @@ colcon test-result --verbose
 - `libserial-dev` — C++ serial communication (duck_firmware)
 - `python3-smbus` — I2C for MPU6050
 - `Eigen3` — Matrix math for kinematics (duck_control)
-- ROS2 packages: `ros2_control`, `nav2_*`, `robot_localization`, `rosbridge_server`, `twist_mux`, `joy`, `joy_teleop`
+- `bless` — Python BLE GATT server library (pip, user-installed) for Flutter app pairing
+- `ros-jazzy-image-transport-plugins` — compressed/theora/zstd image transport
+- ROS2 packages: `ros2_control`, `nav2_*`, `robot_localization`, `rosbridge_server`, `twist_mux`, `joy`, `joy_teleop`, `image_transport`
