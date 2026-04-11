@@ -28,6 +28,7 @@ setup(
     entry_points={
         'console_scripts': [
             'set_initial_pose = duck_localization.set_initial_pose:main',
+            'qr_localizer = duck_localization.qr_localizer:main',
         ],
     },
 )

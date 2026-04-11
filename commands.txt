@@ -56,3 +56,8 @@ for mapping
 
   # 4. Full robot WITHOUT camera (default — current behaviour preserved)
   ros2 launch duck_bringup real_robot.launch.py
+
+
+
+
+sudo systemctl restart duck_robot

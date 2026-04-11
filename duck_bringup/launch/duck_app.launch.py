@@ -62,10 +62,30 @@ def generate_launch_description():
         ],
     )
 
+    # QR landmark relocalization — auto-detects on boot, publishes
+    # /initialpose, then shuts down
+    qr_landmarks_file = os.path.join(
+        get_package_share_directory('duck_localization'),
+        'config', 'qr_landmarks.yaml')
+    qr_localizer = Node(
+        package='duck_localization',
+        executable='qr_localizer',
+        name='qr_localizer',
+        output='screen',
+        parameters=[{
+            'landmarks_file': qr_landmarks_file,
+            'qr_size': 0.097,
+            'auto_relocalize': True,
+            'auto_timeout': 60.0,
+        }],
+        condition=IfCondition(use_camera),
+    )
+
     return LaunchDescription([
         use_camera_arg,
         real_robot_launch,
         navigation_launch,
         image_republisher,
         rosbridge_node,
+        qr_localizer,
     ])
