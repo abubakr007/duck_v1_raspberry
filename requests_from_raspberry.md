@@ -1,109 +1,82 @@
-# Raspberry Pi 5 - BLE Pairing Service Requirements
+# Requests from Raspberry Pi
 
-The Flutter app needs a BLE (Bluetooth Low Energy) GATT server running on the Raspberry Pi 5 so that new users can configure WiFi and get the robot's IP address without needing to know it in advance.
+These are ROS2-side changes needed on the Raspberry Pi to support the new Flutter app features.
 
-## When to Run
+---
 
-The BLE pairing service should **always run in the background** as a systemd service. It must be active so the Flutter app can discover and connect to the Pi via Bluetooth at any time (e.g., when the robot moves to a new WiFi network).
+## 1. System Manager Node (`duck_system_manager`)
 
-## BLE GATT Server Specification
+**Purpose**: Expose shutdown and service restart as ROS2 services.
 
-### Advertised Name
+**Package**: Can be added to `duck_bringup` or as a standalone package.
 
-The device should advertise as `DuckV1` (or `DuckV1-XXXX` where XXXX is the last 4 of the MAC address for uniqueness). The name must be non-empty so the Flutter app can display it in the scan results.
+### Node: `duck_system_manager`
 
-### Service UUID
+**Services**:
 
-```
-12345678-1234-5678-1234-56789abcdef0
-```
+| Service | Type | Action |
+|---------|------|--------|
+| `/duck/shutdown` | `std_srvs/srv/Trigger` | Runs `sudo shutdown -h now` |
+| `/duck/restart_service` | `std_srvs/srv/Trigger` | Runs `sudo systemctl restart duck_robot` |
 
-### Characteristics
-
-| UUID | Name | Properties | Description |
-|---|---|---|---|
-| `12345678-1234-5678-1234-56789abcdef1` | WiFi SSID | Write | The Flutter app writes the WiFi network name (UTF-8 encoded) |
-| `12345678-1234-5678-1234-56789abcdef2` | WiFi Password | Write | The Flutter app writes the WiFi password (UTF-8 encoded) |
-| `12345678-1234-5678-1234-56789abcdef3` | Command | Write | The Flutter app writes a command string (see below) |
-| `12345678-1234-5678-1234-56789abcdef4` | Status | Read, Notify | The Pi sends status updates back to the Flutter app |
-
-### Command Values (written to Command characteristic)
-
-| Command | Action |
-|---|---|
-| `CONNECT` | Use the previously written SSID and Password to connect to WiFi |
-
-### Status Values (sent via Notify on Status characteristic)
-
-| Status | Meaning |
-|---|---|
-| `CONNECTING` | Pi is attempting to connect to WiFi |
-| `CONNECTED:<ip_address>` | Successfully connected. `<ip_address>` is the Pi's IP on the WiFi network (e.g., `CONNECTED:192.168.1.42`) |
-| `FAILED:<reason>` | Connection failed. `<reason>` is a human-readable error (e.g., `FAILED:Wrong password`, `FAILED:Network not found`) |
-
-## Flow
-
-1. Flutter app scans for BLE devices and finds the Pi (by its advertised name)
-2. Flutter app connects to the Pi's GATT server
-3. Flutter app discovers services and finds service `12345678-1234-5678-1234-56789abcdef0`
-4. Flutter app writes the WiFi SSID to characteristic `...def1`
-5. Flutter app writes the WiFi password to characteristic `...def2`
-6. Flutter app subscribes to notifications on status characteristic `...def4`
-7. Flutter app writes `CONNECT` to command characteristic `...def3`
-8. Pi receives the command, attempts to connect to the WiFi using `nmcli` or `networkctl`
-9. Pi sends status notifications:
-   - First: `CONNECTING`
-   - Then either: `CONNECTED:192.168.x.x` or `FAILED:<reason>`
-10. Flutter app reads the IP from the `CONNECTED:` message and uses it to connect to rosbridge at `ws://<ip>:9090`
-11. Flutter app disconnects BLE (no longer needed)
-
-## Implementation Notes
-
-### Recommended Python Library
-
-Use `bless` (Bluetooth Low Energy Server for Python) or `bluezero` for the GATT server implementation.
-
-Install: `pip install bless` or `pip install bluezero`
-
-### WiFi Connection
-
-Use `nmcli` to connect to WiFi:
-
-```bash
-nmcli device wifi connect "<SSID>" password "<PASSWORD>"
-```
-
-After successful connection, get the IP address:
-
-```bash
-hostname -I | awk '{print $1}'
-```
-
-Or via Python:
-
+**Implementation** (Python):
 ```python
+import rclpy
+from rclpy.node import Node
+from std_srvs.srv import Trigger
 import subprocess
-result = subprocess.run(['hostname', '-I'], capture_output=True, text=True)
-ip = result.stdout.strip().split()[0]
+
+class DuckSystemManager(Node):
+    def __init__(self):
+        super().__init__('duck_system_manager')
+        self.create_service(Trigger, '/duck/shutdown', self.shutdown_cb)
+        self.create_service(Trigger, '/duck/restart_service', self.restart_cb)
+        self.get_logger().info('System manager ready')
+
+    def shutdown_cb(self, request, response):
+        self.get_logger().warn('Shutdown requested from app!')
+        response.success = True
+        response.message = 'Shutting down...'
+        subprocess.Popen(['sudo', 'shutdown', '-h', 'now'])
+        return response
+
+    def restart_cb(self, request, response):
+        self.get_logger().warn('Service restart requested from app!')
+        response.success = True
+        response.message = 'Restarting duck_robot service...'
+        subprocess.Popen(['sudo', 'systemctl', 'restart', 'duck_robot'])
+        return response
+
+def main():
+    rclpy.init()
+    node = DuckSystemManager()
+    rclpy.spin(node)
+    rclpy.shutdown()
 ```
 
-### Getting the IP Address
+### Sudoers Configuration
 
-After WiFi connection succeeds, wait a moment (1-2 seconds) for DHCP to assign an IP, then read it and send via the Status characteristic notification.
+Add to `/etc/sudoers.d/duck_robot`:
+```
+abubakr ALL=(ALL) NOPASSWD: /sbin/shutdown
+abubakr ALL=(ALL) NOPASSWD: /bin/systemctl restart duck_robot
+```
+(Replace `abubakr` with the actual username on the RPi)
 
-### systemd Service
+### Systemd Service
 
-Create a systemd service so the BLE server starts on boot:
+**Important**: This node must NOT be part of the `duck_robot` service (otherwise it dies when restarting `duck_robot`). Create a separate systemd unit:
 
+**File**: `/etc/systemd/system/duck_system_manager.service`
 ```ini
 [Unit]
-Description=Duck V1 BLE Pairing Service
-After=bluetooth.target
-Wants=bluetooth.target
+Description=Duck System Manager (shutdown/restart services)
+After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 /home/pi/duck_ble_pairing.py
+User=abubakr
+ExecStart=/bin/bash -c "source /opt/ros/humble/setup.bash && source /home/abubakr/duck_ws/install/setup.bash && ros2 run duck_bringup duck_system_manager"
 Restart=always
 RestartSec=5
 
@@ -111,60 +84,195 @@ RestartSec=5
 WantedBy=multi-user.target
 ```
 
-### Bluetooth Setup on Pi
-
-Make sure Bluetooth is enabled:
-
+Enable it:
 ```bash
-sudo systemctl enable bluetooth
-sudo systemctl start bluetooth
+sudo systemctl enable duck_system_manager
+sudo systemctl start duck_system_manager
 ```
-
-The Pi 5 has built-in Bluetooth 5.0 which supports BLE.
-
-### Security Note
-
-The WiFi password is transmitted over BLE. While BLE has encryption at the link layer, for additional security you could add application-layer encryption in a future iteration. For now, the short range of BLE (~10m) provides reasonable security for a local robot pairing scenario.
 
 ---
 
-# Camera Compressed Image Streaming (Phase 2)
+## 2. Map Manager Node (`duck_map_manager`)
 
-The Flutter app subscribes to `/camera/image_raw/compressed` (`sensor_msgs/CompressedImage`) via rosbridge to display a live camera feed.
+**Purpose**: Manage map files (list, load, save, delete, set default) from the Flutter app.
 
-## Requirements
+**Package**: Can be added to `duck_nav_stack` or `duck_bringup`.
 
-The `duck_vision` camera node already uses `image_transport::CameraPublisher`, which automatically publishes compressed image topics **if the image_transport plugins are installed**.
+### Communication Protocol (Topic-based RPC)
 
-### Install image_transport plugins
+Uses pub/sub instead of custom service types to avoid creating an interfaces package.
 
-```bash
-sudo apt install ros-${ROS_DISTRO}-image-transport-plugins
+| Topic | Type | Direction |
+|-------|------|-----------|
+| `/duck/map_manager/command` | `std_msgs/String` | Flutter -> RPi |
+| `/duck/map_manager/response` | `std_msgs/String` | RPi -> Flutter |
+
+Messages are JSON-encoded strings with a request `id` for correlation.
+
+### Commands
+
+#### List Maps
+```json
+// Request
+{"id": "abc123", "cmd": "list"}
+
+// Response
+{"id": "abc123", "success": true, "data": {"maps": ["small_house", "my_house", "office"]}}
 ```
 
-This provides the `compressed` transport plugin which auto-publishes `/camera/image_raw/compressed` (JPEG) alongside the raw topic.
+#### Load Map
+Loads a map into map_server (calls `/map_server/load_map` service internally).
+```json
+// Request
+{"id": "abc123", "cmd": "load", "name": "small_house"}
 
-### Verify it works
-
-After installing and restarting the camera node:
-
-```bash
-# Check the compressed topic exists
-ros2 topic list | grep compressed
-
-# Should show: /camera/image_raw/compressed
-
-# Verify messages are flowing
-ros2 topic hz /camera/image_raw/compressed
+// Response
+{"id": "abc123", "success": true, "message": "Map loaded"}
 ```
 
-### Rosbridge note
+#### Save Current Map
+Saves the current map_server map to disk with the given name (calls map_saver or reads from `/map` topic).
+```json
+// Request
+{"id": "abc123", "cmd": "save", "name": "new_map_name"}
 
-Make sure rosbridge is launched **without** restricting message size, as compressed images can be 50-150KB encoded as base64:
+// Response
+{"id": "abc123", "success": true, "message": "Map saved"}
+```
 
-```bash
+#### Save Edited Map
+Saves modified occupancy grid data sent from the Flutter app.
+```json
+// Request
+{
+  "id": "abc123",
+  "cmd": "save_edited",
+  "name": "my_house_edited",
+  "width": 200,
+  "height": 200,
+  "resolution": 0.05,
+  "origin_x": -5.0,
+  "origin_y": -5.0,
+  "data": [0, 0, 100, -1, 0, ...]
+}
+
+// Response
+{"id": "abc123", "success": true, "message": "Edited map saved and loaded"}
+```
+
+#### Delete Map
+```json
+// Request
+{"id": "abc123", "cmd": "delete", "name": "old_map"}
+
+// Response
+{"id": "abc123", "success": true, "message": "Map deleted"}
+```
+
+#### Set Default Map
+Sets which map loads automatically on next boot.
+```json
+// Request
+{"id": "abc123", "cmd": "set_default", "name": "small_house"}
+
+// Response
+{"id": "abc123", "success": true, "message": "Default map set"}
+```
+
+### Implementation Notes
+
+**Map storage directory**: `~/duck_ws/src/duck_localization/maps/` (or a configurable path)
+
+**File operations**:
+- `list`: Glob `*.yaml` files in maps directory, return filenames without extension
+- `load`: Call `map_server`'s `/map_server/load_map` service with full path to the `.yaml` file
+- `save`: Use `nav2_map_server`'s map_saver_cli or manually:
+  1. Subscribe to `/map` topic once, get current occupancy grid
+  2. Write `.pgm` file (P5 format, binary PGM)
+  3. Write companion `.yaml` file with metadata
+- `save_edited`: Receive occupancy grid data from Flutter, write `.pgm` + `.yaml`
+- `delete`: Remove `.yaml` and `.pgm` files
+- `set_default`: Write map name to `~/.duck_active_map` text file
+
+**Default map on boot**: Modify `duck_app.launch.py` (or `navigation.launch.py`) to read `~/.duck_active_map` and use that map path. Fallback to `small_house` if file doesn't exist.
+
+Example launch file change in `navigation.launch.py`:
+```python
+import os
+
+def get_default_map():
+    active_map_file = os.path.expanduser('~/.duck_active_map')
+    if os.path.exists(active_map_file):
+        with open(active_map_file) as f:
+            map_name = f.read().strip()
+        map_path = os.path.join(maps_dir, f'{map_name}.yaml')
+        if os.path.exists(map_path):
+            return map_path
+    return os.path.join(maps_dir, 'small_house.yaml')  # fallback
+```
+
+### PGM File Writing Reference
+
+When saving edited map data as `.pgm`:
+```python
+def save_pgm(filepath, width, height, data):
+    """Save occupancy grid as PGM (P5 binary format).
+    
+    data: list of int (-1=unknown, 0=free, 100=occupied)
+    PGM values: 254=free, 0=occupied, 205=unknown
+    """
+    with open(filepath, 'wb') as f:
+        f.write(f'P5\n{width} {height}\n255\n'.encode())
+        for y in range(height - 1, -1, -1):  # flip Y axis
+            for x in range(width):
+                val = data[y * width + x]
+                if val == -1:
+                    f.write(bytes([205]))  # unknown
+                elif val == 0:
+                    f.write(bytes([254]))  # free
+                else:
+                    f.write(bytes([0]))    # occupied
+```
+
+Companion `.yaml` file:
+```yaml
+image: {map_name}.pgm
+mode: trinary
+resolution: {resolution}
+origin: [{origin_x}, {origin_y}, 0.0]
+negate: 0
+occupied_thresh: 0.65
+free_thresh: 0.196
+```
+
+### Where to Add This Node
+
+Add `duck_map_manager` to the `duck_app.launch.py` launch file so it starts with the rest of the stack:
+```python
+duck_map_manager = Node(
+    package='duck_bringup',  # or duck_nav_stack
+    executable='duck_map_manager',
+    name='duck_map_manager',
+    parameters=[{'maps_directory': maps_dir}],
+)
+```
+
+### rosbridge Configuration
+
+If edited maps are large (e.g., 400x400 = 160,000 cells), the JSON message may exceed rosbridge's default max message size. Add to rosbridge launch:
+```python
 ros2 run rosbridge_server rosbridge_websocket \
-  --ros-args -p delay_between_messages:=0.0
+  --ros-args -p delay_between_messages:=0.0 -p max_message_size:=10000000
 ```
 
-No other changes needed on the RPi side - the existing camera node and rosbridge handle everything.
+---
+
+## Summary Checklist
+
+- [ ] Create `duck_system_manager` Python node with `/duck/shutdown` and `/duck/restart_service` services
+- [ ] Configure sudoers for passwordless shutdown and systemctl restart
+- [ ] Create separate systemd unit for `duck_system_manager` (independent of `duck_robot`)
+- [ ] Create `duck_map_manager` Python node with topic-based RPC for map CRUD
+- [ ] Modify launch file to read default map from `~/.duck_active_map`
+- [ ] Add `duck_map_manager` to `duck_app.launch.py`
+- [ ] Optionally increase rosbridge `max_message_size` for large map transfers

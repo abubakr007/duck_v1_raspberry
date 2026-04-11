@@ -52,8 +52,16 @@ def generate_launch_description():
     autostart = LaunchConfiguration('autostart')
     log_level = LaunchConfiguration('log_level')
 
-    # Default map path
-    default_map = os.path.join(localization_dir, 'maps', 'small_house.yaml')
+    # Default map path — read from ~/.duck_active_map if it exists
+    maps_dir = os.path.join(localization_dir, 'maps')
+    active_map_file = os.path.expanduser('~/.duck_active_map')
+    default_map = os.path.join(maps_dir, 'my_house.yaml')  # fallback
+    if os.path.isfile(active_map_file):
+        with open(active_map_file) as f:
+            active_name = f.read().strip()
+        candidate = os.path.join(maps_dir, f'{active_name}.yaml')
+        if active_name and os.path.isfile(candidate):
+            default_map = candidate
 
     # Default params file
     default_params = os.path.join(nav_stack_dir, 'config', 'nav2_params.yaml')

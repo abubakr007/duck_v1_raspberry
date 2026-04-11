@@ -29,6 +29,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'duck_system_manager = duck_bringup.duck_system_manager:main',
+            'duck_map_manager = duck_bringup.duck_map_manager:main',
         ],
     },
 )

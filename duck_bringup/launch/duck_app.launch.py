@@ -81,6 +81,22 @@ def generate_launch_description():
         condition=IfCondition(use_camera),
     )
 
+    # Map manager (list, load, save, delete maps from Flutter app)
+    maps_dir = os.path.join(
+        get_package_share_directory('duck_localization'), 'maps'
+    )
+    # Use source maps directory so new maps persist across rebuilds
+    src_maps_dir = os.path.expanduser(
+        '~/duck_ws/src/duck_localization/maps'
+    )
+    duck_map_manager = Node(
+        package='duck_bringup',
+        executable='duck_map_manager',
+        name='duck_map_manager',
+        output='screen',
+        parameters=[{'maps_directory': src_maps_dir}],
+    )
+
     return LaunchDescription([
         use_camera_arg,
         real_robot_launch,
@@ -88,4 +104,5 @@ def generate_launch_description():
         image_republisher,
         rosbridge_node,
         qr_localizer,
+        duck_map_manager,
     ])
