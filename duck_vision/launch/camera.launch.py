@@ -40,7 +40,7 @@ def generate_launch_description():
         DeclareLaunchArgument("framerate", default_value="15.0"),
         DeclareLaunchArgument(
             "rotation_deg",
-            default_value="0",
+            default_value="180",
             description="Software image rotation: 0 or 180. Use 180 if the camera "
                         "module is mounted upside-down.",
         ),

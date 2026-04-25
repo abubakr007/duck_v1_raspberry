@@ -11,7 +11,7 @@ camera:
 
     # Software rotation applied to every frame before publishing.
     # Only 0 and 180 are implemented; anything else falls back to 0 with a warning.
-    rotation_deg: 0
+    rotation_deg: 180
 
     # Publisher QoS reliability for image_raw and camera_info topics.
     #   "reliable"    — works with default RViz / image_view / image_transport (recommended)
